@@ -215,6 +215,7 @@ void handle_radio_event(const struct device *dev, enum ieee802154_event evt,
 	switch (evt) {
 	case IEEE802154_EVENT_TX_STARTED:
 		if (sState == OT_RADIO_STATE_TRANSMIT) {
+			LOG_ERR("s PENDING_EVENT_TX_STARTED");
 			set_pending_event(PENDING_EVENT_TX_STARTED);
 		}
 		break;
@@ -238,10 +239,13 @@ void handle_radio_event(const struct device *dev, enum ieee802154_event evt,
 				rx_result = OT_ERROR_FAILED;
 				break;
 			}
+
+			LOG_ERR("s PENDING_EVENT_RX_FAILED");
 			set_pending_event(PENDING_EVENT_RX_FAILED);
 		}
 		break;
 	case IEEE802154_EVENT_RX_OFF:
+		LOG_ERR("s PENDING_EVENT_SLEEP");
 		set_pending_event(PENDING_EVENT_SLEEP);
 		break;
 	default:
@@ -465,6 +469,7 @@ void transmit_message(struct k_work *tx_job)
 		break;
 	}
 
+	LOG_ERR("s PENDING_EVENT_TX_DONE");
 	set_pending_event(PENDING_EVENT_TX_DONE);
 }
 
@@ -588,6 +593,7 @@ exit:
 
 int notify_new_rx_frame(struct net_pkt *pkt)
 {
+	LOG_ERR("s PENDING_EVENT_FRAME_RECEIVED");
 	k_fifo_put(&rx_pkt_fifo, pkt);
 	set_pending_event(PENDING_EVENT_FRAME_RECEIVED);
 
@@ -596,6 +602,7 @@ int notify_new_rx_frame(struct net_pkt *pkt)
 
 int notify_new_tx_frame(struct net_pkt *pkt)
 {
+	LOG_ERR("s PENDING_EVENT_FRAME_TO_SEND");
 	k_fifo_put(&tx_pkt_fifo, pkt);
 	set_pending_event(PENDING_EVENT_FRAME_TO_SEND);
 
@@ -625,6 +632,8 @@ void platformRadioProcess(otInstance *aInstance)
 	if (is_pending_event_set(PENDING_EVENT_FRAME_TO_SEND)) {
 		struct net_pkt *evt_pkt;
 
+		LOG_ERR("x PENDING_EVENT_FRAME_TO_SEND");
+
 		reset_pending_event(PENDING_EVENT_FRAME_TO_SEND);
 		while ((evt_pkt = (struct net_pkt *) k_fifo_get(&tx_pkt_fifo, K_NO_WAIT)) != NULL) {
 			if (IS_ENABLED(CONFIG_OPENTHREAD_COPROCESSOR_RCP)) {
@@ -638,6 +647,8 @@ void platformRadioProcess(otInstance *aInstance)
 	if (is_pending_event_set(PENDING_EVENT_FRAME_RECEIVED)) {
 		struct net_pkt *rx_pkt;
 
+		LOG_ERR("x PENDING_EVENT_FRAME_RECEIVED");
+
 		reset_pending_event(PENDING_EVENT_FRAME_RECEIVED);
 		while ((rx_pkt = (struct net_pkt *) k_fifo_get(&rx_pkt_fifo, K_NO_WAIT)) != NULL) {
 			openthread_handle_received_frame(aInstance, rx_pkt);
@@ -645,6 +656,7 @@ void platformRadioProcess(otInstance *aInstance)
 	}
 
 	if (is_pending_event_set(PENDING_EVENT_RX_FAILED)) {
+		LOG_ERR("x PENDING_EVENT_RX_FAILED");
 		reset_pending_event(PENDING_EVENT_RX_FAILED);
 		if (IS_ENABLED(CONFIG_OPENTHREAD_DIAG) && otPlatDiagModeGet()) {
 			otPlatDiagRadioReceiveDone(aInstance, NULL, rx_result);
@@ -654,11 +666,13 @@ void platformRadioProcess(otInstance *aInstance)
 	}
 
 	if (is_pending_event_set(PENDING_EVENT_TX_STARTED)) {
+		LOG_ERR("x PENDING_EVENT_TX_STARTED");
 		reset_pending_event(PENDING_EVENT_TX_STARTED);
 		otPlatRadioTxStarted(aInstance, &sTransmitFrame);
 	}
 
 	if (is_pending_event_set(PENDING_EVENT_TX_DONE)) {
+		LOG_ERR("x PENDING_EVENT_TX_DONE");
 		reset_pending_event(PENDING_EVENT_TX_DONE);
 
 		if (sState == OT_RADIO_STATE_TRANSMIT ||
@@ -669,6 +683,7 @@ void platformRadioProcess(otInstance *aInstance)
 	}
 
 	if (is_pending_event_set(PENDING_EVENT_SLEEP)) {
+		LOG_ERR("x PENDING_EVENT_SLEEP");
 		reset_pending_event(PENDING_EVENT_SLEEP);
 		ARG_UNUSED(otPlatRadioSleep(aInstance));
 	}

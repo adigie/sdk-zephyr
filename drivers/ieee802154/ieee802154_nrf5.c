@@ -422,7 +422,7 @@ static int handle_ack(struct nrf5_802154_data *nrf5_radio)
 	ack_pkt = net_pkt_rx_alloc_with_buffer(nrf5_radio->iface, ack_len,
 					       AF_UNSPEC, 0, K_NO_WAIT);
 	if (!ack_pkt) {
-		LOG_ERR("No free packet available.");
+		LOG_ERR("No free rx packet available.");
 		err = -ENOMEM;
 		goto free_nrf_ack;
 	}
